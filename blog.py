@@ -179,8 +179,8 @@ def main():
     buzz_client.use_anonymous_oauth_consumer()
     token = buzz_client.fetch_oauth_request_token('oob')
     
-    key = ""
-    secret = ""
+    key = "1/iw6C3IqsVvN7P_kdGx3xnW9odteT3hAccAzSecXwY6k"
+    secret = "tBdemlPh21Wuei3s104mxE3z"
     
     buzz_client.build_oauth_access_token(key, secret)
     
