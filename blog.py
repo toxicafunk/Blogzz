@@ -26,6 +26,9 @@ import wsgiref.handlers
 from google.appengine.api import users
 from google.appengine.ext import db
 
+import buzz
+
+token = verification_code = buzz_client = ''
 
 class Entry(db.Model):
     """A single blog entry."""
@@ -75,12 +78,19 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class HomeHandler(BaseHandler):
     def get(self):
+        global token, verification_code, buzz_client
+        
         entries = db.Query(Entry).order('-published').fetch(limit=5)
         if not entries:
             if not self.current_user or self.current_user.administrator:
                 self.redirect("/compose")
                 return
-        self.render("home.html", entries=entries)
+        
+        # let's query buzz
+        user_id = '@me'
+        buzz_user = buzz_client.person(user_id).data
+        buzz_posts = buzz_client.posts(user_id=user_id).data
+        self.render("home.html", entries=entries, buzz_user=buzz_user, buzz_posts=buzz_posts)
 
 
 class EntryHandler(BaseHandler):
@@ -162,6 +172,18 @@ application = tornado.wsgi.WSGIApplication([
 
 
 def main():
+    global token, verification_code, buzz_client
+    
+    buzz_client = buzz.Client()
+    buzz_client.oauth_scopes=[buzz.FULL_ACCESS_SCOPE]
+    buzz_client.use_anonymous_oauth_consumer()
+    token = buzz_client.fetch_oauth_request_token('oob')
+    
+    key = ""
+    secret = ""
+    
+    buzz_client.build_oauth_access_token(key, secret)
+    
     wsgiref.handlers.CGIHandler().run(application)
 
 

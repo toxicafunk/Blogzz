@@ -4,5 +4,11 @@
   {% for entry in entries %}
     {{ modules.Entry(entry) }}
   {% end %}
+  
+  <ul>
+  {% for post in buzz_posts %}
+    <li>{{ post.id, post.title, post.actor.name, post.content, post.link }}</li>
+  {% end %}
+  </ul>
   <div><a href="/archive">{{ _("Archive") }}</a></div>
 {% end %}
