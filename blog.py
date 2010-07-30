@@ -90,6 +90,7 @@ class HomeHandler(BaseHandler):
         user_id = '@me'
         buzz_user = buzz_client.person(user_id).data
         buzz_posts = buzz_client.posts(user_id=user_id).data
+        #buzz_posts = buzz_client.search("date:2010-07-30").data
         self.render("home.html", entries=entries, buzz_user=buzz_user, buzz_posts=buzz_posts)
 
 
