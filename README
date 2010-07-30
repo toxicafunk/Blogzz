@@ -1,4 +1,4 @@
-Running the Tornado AppEngine example
+Running Blogzz example
 =====================================
 This example is designed to run in Google AppEngine, so there are a couple
 of steps to get it running. You can download the Google AppEngine Python
