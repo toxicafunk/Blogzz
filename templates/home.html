@@ -7,8 +7,7 @@
   
   <ul>
   {% for post in buzz_posts %}
-    <li><a href="{{ post.link }}"> {{ post.title }} </a> {{ post.content }}</li>
-        <em>Post Updated</em>
+    <li><a href="{{ post.link }}"> {{ post.title }} </a> {{ post.content }} <em>{{ post.updated }}</em></li>
   {% end %}
   </ul>
   <div><a href="/archive">{{ _("Archive") }}</a></div>
