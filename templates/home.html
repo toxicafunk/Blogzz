@@ -9,7 +9,7 @@
   {% for post in buzz_posts %}
     <li>
         <a href="{{ str(post.link['href']) }}"> {{ post.title }} </a> {{ post.content }}
-        <em>{{ post.published }}- {{ post.updated }}</em>
+        <em>{{ post.published }} - {{ post.updated }}</em> --- <font color="red">{{ post.json }}</font>
     </li>
   {% end %}
   </ul>

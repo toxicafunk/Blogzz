@@ -30,16 +30,20 @@ import buzz
 
 token = verification_code = buzz_client = ''
 
-class Entry(db.Model):
-    """A single blog entry."""
+class Content(db.Model):
     author = db.UserProperty()
-    title = db.StringProperty(required=True)
-    slug = db.StringProperty(required=True)
     markdown = db.TextProperty(required=True)
     html = db.TextProperty(required=True)
     published = db.DateTimeProperty(auto_now_add=True)
     updated = db.DateTimeProperty(auto_now=True)
 
+class Entry(Content):
+    """A single blog entry."""
+    title = db.StringProperty(required=True)
+    slug = db.StringProperty(required=True)
+
+#class Buzz(Content):
+    
 
 def administrator(method):
     """Decorate with this method to restrict to site admins."""
