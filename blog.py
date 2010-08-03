@@ -27,23 +27,9 @@ from google.appengine.api import users
 from google.appengine.ext import db
 
 import buzz
+import blogzz.models as models
 
 token = verification_code = buzz_client = ''
-
-class Content(db.Model):
-    author = db.UserProperty()
-    markdown = db.TextProperty(required=True)
-    html = db.TextProperty(required=True)
-    published = db.DateTimeProperty(auto_now_add=True)
-    updated = db.DateTimeProperty(auto_now=True)
-
-class Entry(Content):
-    """A single blog entry."""
-    title = db.StringProperty(required=True)
-    slug = db.StringProperty(required=True)
-
-#class Buzz(Content):
-    
 
 def administrator(method):
     """Decorate with this method to restrict to site admins."""
@@ -84,7 +70,7 @@ class HomeHandler(BaseHandler):
     def get(self):
         global token, verification_code, buzz_client
         
-        entries = db.Query(Entry).order('-published').fetch(limit=5)
+        entries = db.Query(models.Entry).order('-published').fetch(limit=5)
         if not entries:
             if not self.current_user or self.current_user.administrator:
                 self.redirect("/compose")
@@ -100,14 +86,14 @@ class HomeHandler(BaseHandler):
 
 class EntryHandler(BaseHandler):
     def get(self, slug):
-        entry = db.Query(Entry).filter("slug =", slug).get()
+        entry = db.Query(models.Entry).filter("slug =", slug).get()
         if not entry: raise tornado.web.HTTPError(404)
         self.render("entry.html", entry=entry)
 
 
 class ArchiveHandler(BaseHandler):
     def get(self):
-        entries = db.Query(Entry).order('-published')
+        entries = db.Query(models.Entry).order('-published')
         self.render("archive.html", entries=entries)
 
 
@@ -129,7 +115,7 @@ class ComposeHandler(BaseHandler):
     def post(self):
         key = self.get_argument("key", None)
         if key:
-            entry = Entry.get(key)
+            entry = models.Entry.get(key)
             entry.title = self.get_argument("title")
             entry.markdown = self.get_argument("markdown")
             entry.html = markdown.markdown(self.get_argument("markdown"))
@@ -141,11 +127,11 @@ class ComposeHandler(BaseHandler):
             slug = "-".join(slug.lower().strip().split())
             if not slug: slug = "entry"
             while True:
-                existing = db.Query(Entry).filter("slug =", slug).get()
+                existing = db.Query(models.Entry).filter("slug =", slug).get()
                 if not existing or str(existing.key()) == key:
                     break
                 slug += "-2"
-            entry = Entry(
+            entry = models.Entry(
                 author=self.current_user,
                 title=title,
                 slug=slug,
