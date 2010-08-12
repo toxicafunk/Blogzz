@@ -3,12 +3,18 @@ import markdown
 import re
 import tornado.web
 import unicodedata
+import datetime
 
 from google.appengine.api import users
 from google.appengine.ext import db
 
 import buzz
 import blogzz.models as models
+
+last_buzz = None
+buzz_user = None,
+buzz_posts = None
+
 
 def administrator(method):
     """Decorate with this method to restrict to site admins."""
@@ -71,12 +77,17 @@ class HomeHandler(BaseHandler):
                 self.redirect("/compose")
                 return
         
-        # let's query buzz
-        buzz_client = self.get_buzz_client()
-        user_id = '@me'
-        buzz_user = buzz_client.person(user_id).data
-        buzz_posts = buzz_client.posts(user_id=user_id).data
-        #buzz_posts = buzz_client.search("date:2010-07-30").data
+        global last_buzz,buzz_user,buzz_posts
+        
+        if not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 120:
+            # let's query buzz
+            buzz_client = self.get_buzz_client()
+            user_id = '@me'
+            buzz_user = buzz_client.person(user_id).data
+            buzz_posts = buzz_client.posts(user_id=user_id).data
+            #buzz_posts = buzz_client.search("date:2010-07-30").data
+            last_buzz = datetime.datetime.now()
+            
         self.render("home.html", entries=entries, buzz_user=buzz_user, buzz_posts=buzz_posts)
 
 
