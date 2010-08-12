@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+*** <strong>{{ buzz_user.name, buzz_user.photo, buzz_user.uris }}</strong> ***
+
 {% block body %}
   {% for entry in entries %}
     {{ modules.Entry(entry) }}

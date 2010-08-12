@@ -17,7 +17,7 @@ class Comment(Content):
         to and no title or slug."""
     entry = db.ReferenceProperty(Entry)
 
-class Buzz(Content):
+class Buzz(Entry):
     """ Besides all properties in Content, a Buzz instance also
         has the complete json returned from google buzz."""
     json = db.TextProperty(required=True)
