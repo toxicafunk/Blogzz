@@ -132,6 +132,7 @@ class ComposeHandler(BaseHandler):
                 "ascii", "ignore")
             slug = re.sub(r"[^\w]+", " ", slug)
             slug = "-".join(slug.lower().strip().split())
+            #name = "/".join(slug.lower().strip().split())
             if not slug: slug = "entry"
             while True:
                 existing = db.Query(models.Entry).filter("slug =", slug).get()
@@ -139,6 +140,7 @@ class ComposeHandler(BaseHandler):
                     break
                 slug += "-2"
             entry = models.Entry(
+                key_name= "k"+slug,
                 author=self.current_user,
                 title=title,
                 slug=slug,
