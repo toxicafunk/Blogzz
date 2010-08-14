@@ -15,6 +15,7 @@
 # under the License.
 
 import os.path
+import logging
 
 import tornado.wsgi
 import wsgiref.handlers
@@ -35,9 +36,29 @@ application = tornado.wsgi.WSGIApplication([
     (r"/compose", handlers.ComposeHandler),
 ], **settings)
 
-
-def main():
+def real_main():
+    tornado.locale.load_translations(
+        os.path.join(os.path.dirname(__file__), "translations"))
     wsgiref.handlers.CGIHandler().run(application)
 
+def profile_main():
+    # This is the main function for profiling
+    # We've renamed our original main() above to real_main()
+    import cProfile, pstats
+    prof = cProfile.Profile()
+    prof = prof.runctx("real_main()", globals(), locals())
+    print '<link rel="stylesheet" href="/static/css/profile.css" type="text/css"/>'
+    print "<pre id='profile'>"
+    stats = pstats.Stats(prof)
+    stats.sort_stats("time")  # Or cumulative
+    stats.print_stats(80)  # 80 = how many to print
+    # The rest is optional.
+    print "----------"
+    stats.print_callees()
+    stats.print_callers()
+    print "</pre>"
+
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
+    real_main()
+    #profile_main()

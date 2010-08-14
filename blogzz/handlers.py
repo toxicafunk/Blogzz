@@ -4,17 +4,16 @@ import re
 import tornado.web
 import unicodedata
 import datetime
+import logging
 
 from google.appengine.api import users
 from google.appengine.ext import db
 
 import buzz
 import blogzz.models as models
+import blogzz.importer as importer
 
 last_buzz = None
-buzz_user = None,
-buzz_posts = None
-
 
 def administrator(method):
     """Decorate with this method to restrict to site admins."""
@@ -71,24 +70,25 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class HomeHandler(BaseHandler):
     def get(self):
-        entries = db.Query(models.Entry).order('-published').fetch(limit=5)
-        if not entries:
-            if not self.current_user or self.current_user.administrator:
-                self.redirect("/compose")
-                return
-        
-        global last_buzz,buzz_user,buzz_posts
+        global last_buzz
         
         if not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 120:
             # let's query buzz
             buzz_client = self.get_buzz_client()
             user_id = '@me'
-            buzz_user = buzz_client.person(user_id).data
             buzz_posts = buzz_client.posts(user_id=user_id).data
             #buzz_posts = buzz_client.search("date:2010-07-30").data
             last_buzz = datetime.datetime.now()
+            logging.info("obtained %d buzzes" % len(buzz_posts))
+            importer.import_buzzes(buzz_posts,self.current_user)
+        
+        entries = db.Query(models.Entry).order('-published').fetch(limit=5)
+        if not entries:
+            if not self.current_user or self.current_user.administrator:
+                self.redirect("/compose")
+                return
             
-        self.render("home.html", entries=entries, buzz_user=buzz_user, buzz_posts=buzz_posts)
+        self.render("home.html", entries=entries)
 
 
 class EntryHandler(BaseHandler):
@@ -140,7 +140,8 @@ class ComposeHandler(BaseHandler):
                     break
                 slug += "-2"
             entry = models.Entry(
-                key_name= "k"+slug,
+                key_name= "k/"+slug,
+                origin = "blogzz",
                 author=self.current_user,
                 title=title,
                 slug=slug,

@@ -589,6 +589,7 @@ class Client:
     api_endpoint = API_PREFIX + "/activities/" + str(actor_id) + \
       "/@self/" + post_id
     api_endpoint += "?alt=json"
+    logging.debug("Buzz endpoint: %" % api_endpoint)
     return Result(self, 'GET', api_endpoint, result_type=Post, singular=True)
 
   def create_post(self, post):

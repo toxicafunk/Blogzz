@@ -1,19 +1,9 @@
 {% extends "base.html" %}
 
-*** <strong>{{ buzz_user.name, buzz_user.photo, buzz_user.uris }}</strong> ***
-
 {% block body %}
   {% for entry in entries %}
     {{ modules.Entry(entry) }}
   {% end %}
   
-  <ul>
-  {% for post in buzz_posts %}
-    <li>
-        <a href="{{ str(post.link['href']) }}"> {{ post.title }} </a> {{ post.content }}
-        <em>{{ post.published }} - {{ post.updated }}</em> --- <font color="red">{{ post.json }}</font>
-    </li>
-  {% end %}
-  </ul>
   <div><a href="/archive">{{ _("Archive") }}</a></div>
 {% end %}

@@ -50,7 +50,7 @@
         ]
     }, 
     u'originalContent': u'R2D2 in Irona Man armor http://gadgetsin.com/uploads/2010/06/star_wars_r2_d2_in_iron_man_armor_mk_x.jpg'}, 
-    u'updated': u'2010-07-28T00:55:38.672Z', 
+    u'updated': u'2010-07-28T00:55:38.672Z', /* esto esta en ISOFORMAT:datetime.datetime.strptime(str,"%Y-%m-%dT%H:%M:%S.%fZ") */
     u'actor': {
         u'profileUrl': u'http://www.google.com/profiles/117238286441813929565', 
         u'thumbnailUrl': u'', 
