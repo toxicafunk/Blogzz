@@ -36,9 +36,9 @@ def administrator(method):
 
 class BaseHandler(tornado.web.RequestHandler):
     def __init__(self, application, request, transforms=None):
-        tornado.web.RequestHandler.__init__(self,application,request,transforms)
+        tornado.web.RequestHandler.__init__(self,application,request)
         self.buzz_client = None
-        
+
     """Implements Google Accounts authentication methods."""
     def get_current_user(self):
         user = users.get_current_user()
@@ -52,7 +52,7 @@ class BaseHandler(tornado.web.RequestHandler):
         # Let the templates access the users module to generate login URLs
         return tornado.web.RequestHandler.render_string(
             self, template_name, users=users, **kwargs)
-    
+
     def get_buzz_client(self):
         if not self.buzz_client:
             self.buzz_client = buzz.Client()
@@ -60,18 +60,18 @@ class BaseHandler(tornado.web.RequestHandler):
             self.buzz_client.use_anonymous_oauth_consumer()
             # creo que no se necesita token
             token = self.buzz_client.fetch_oauth_request_token('oob')
-            
+
             key = "1/iw6C3IqsVvN7P_kdGx3xnW9odteT3hAccAzSecXwY6k"
             secret = "tBdemlPh21Wuei3s104mxE3z"
-            
+
             self.buzz_client.build_oauth_access_token(key, secret)
-        
+
         return self.buzz_client
 
 class HomeHandler(BaseHandler):
     def get(self):
         global last_buzz
-        
+
         if not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 120:
             # let's query buzz
             buzz_client = self.get_buzz_client()
@@ -81,13 +81,13 @@ class HomeHandler(BaseHandler):
             last_buzz = datetime.datetime.now()
             logging.info("obtained %d buzzes" % len(buzz_posts))
             importer.import_buzzes(buzz_posts,self.current_user)
-        
+
         entries = db.Query(models.Entry).order('-published').fetch(limit=5)
         if not entries:
             if not self.current_user or self.current_user.administrator:
                 self.redirect("/compose")
                 return
-            
+
         self.render("home.html", entries=entries)
 
 

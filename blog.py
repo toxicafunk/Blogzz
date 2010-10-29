@@ -23,7 +23,7 @@ import wsgiref.handlers
 import blogzz.handlers as handlers
 
 settings = {
-    "blog_title": u"Sin Animo de Lucro",
+    "blog_title": u"Movimiento y prop\u00F3sito",
     "template_path": os.path.join(os.path.dirname(__file__), "templates"),
     "ui_modules": {"Entry": handlers.EntryModule},
     "xsrf_cookies": True,
