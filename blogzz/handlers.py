@@ -35,8 +35,8 @@ def administrator(method):
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    def __init__(self, application, request, transforms=None):
-        tornado.web.RequestHandler.__init__(self,application,request,transforms)
+    def __init__(self, application, request):
+        tornado.web.RequestHandler.__init__(self,application,request)
         self.buzz_client = None
         
     """Implements Google Accounts authentication methods."""
@@ -72,7 +72,7 @@ class HomeHandler(BaseHandler):
     def get(self):
         global last_buzz
         
-        if not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 120:
+        if self.settings["use_buzz"] and (not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 120):
             # let's query buzz
             buzz_client = self.get_buzz_client()
             user_id = '@me'

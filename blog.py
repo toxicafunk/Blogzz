@@ -17,6 +17,9 @@
 import os.path
 import logging
 
+#import pkg_resources
+#pkg_resources.require("oauth")
+
 import tornado.wsgi
 import wsgiref.handlers
 
@@ -27,6 +30,7 @@ settings = {
     "template_path": os.path.join(os.path.dirname(__file__), "templates"),
     "ui_modules": {"Entry": handlers.EntryModule},
     "xsrf_cookies": True,
+    "use_buzz": False,
 }
 application = tornado.wsgi.WSGIApplication([
     (r"/", handlers.HomeHandler),
