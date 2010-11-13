@@ -84,7 +84,7 @@ import re
 
 import logging
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'third_party'))
+#sys.path.append(os.path.join(os.path.dirname(__file__), 'third_party'))
 
 try:
   import oauth.oauth as oauth

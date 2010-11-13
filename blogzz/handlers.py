@@ -57,9 +57,9 @@ class BaseHandler(tornado.web.RequestHandler):
         if not self.buzz_client:
             self.buzz_client = buzz.Client()
             self.buzz_client.oauth_scopes=[buzz.FULL_ACCESS_SCOPE]
-            self.buzz_client.use_anonymous_oauth_consumer()
+            #self.buzz_client.use_anonymous_oauth_consumer()
             # creo que no se necesita token
-            token = self.buzz_client.fetch_oauth_request_token('oob')
+            #token = self.buzz_client.fetch_oauth_request_token('oob')
 
             key = "1/iw6C3IqsVvN7P_kdGx3xnW9odteT3hAccAzSecXwY6k"
             secret = "tBdemlPh21Wuei3s104mxE3z"
