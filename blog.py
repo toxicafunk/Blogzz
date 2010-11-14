@@ -45,8 +45,8 @@ application = tornado.wsgi.WSGIApplication([
 
 def real_main():
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
-    tornado.locale.load_translations(
-        os.path.join(os.path.dirname(__file__), "translations"))
+    #tornado.locale.load_translations(
+    #    os.path.join(os.path.dirname(__file__), "translations"))
     wsgiref.handlers.CGIHandler().run(application)
 
 def profile_main():

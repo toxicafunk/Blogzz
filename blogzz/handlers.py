@@ -94,7 +94,7 @@ class AtomTestHandler(BaseHandler):
         global last_buzz        
         # let's query buzz
         buzz_client = self.get_buzz_client()
-        user_id = '@me'
+        user_id = 'laguatusa504'
         buzz_posts = buzz_client.postsatom(type_id="@public",user_id=user_id).data
         logging.info("obtained %d buzzes" % len(buzz_posts))
         self.render("atom.html", entries=buzz_posts)
@@ -104,16 +104,15 @@ class SubHubHandler(BaseHandler):
         global last_buzz        
         # let's query buzz
         buzz_client = self.get_buzz_client()
-        user_id = '@me'
+        user_id = 'laguatusa504'
         resp = buzz_client.subscribe2hub(type_id="@public",user_id=user_id)
-        logging.info(resp.read())
         self.render("atom.html", entries=resp.read())
     
 class HubCallbackHandler(BaseHandler):
     def post(self):
         challenge = self.get_argument('hub.challenge')
         self.set_status('200')
-        logging.info(self.request)
+        logging.info('Callback received:" + self.request)
         self.write(challenge)
 
 class EntryHandler(BaseHandler):

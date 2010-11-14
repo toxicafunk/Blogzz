@@ -649,6 +649,7 @@ class Client:
     api_endpoint += "?alt=atom"
     if max_results:
       api_endpoint += "&max-results=" + str(max_results)
+    logging.info(api_endpoint)
     return ResultAtom(self, 'GET', api_endpoint, result_type=Post)
 
   def subscribe2hub(self, type_id='@self', user_id='@me', max_results=20):
