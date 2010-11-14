@@ -30,7 +30,7 @@ settings = {
     "template_path": os.path.join(os.path.dirname(__file__), "templates"),
     "ui_modules": {"Entry": handlers.EntryModule},
     "xsrf_cookies": True,
-    "use_buzz": False,
+    "use_buzz": True,
 }
 application = tornado.wsgi.WSGIApplication([
     (r"/", handlers.HomeHandler),
@@ -38,9 +38,13 @@ application = tornado.wsgi.WSGIApplication([
     (r"/feed", handlers.FeedHandler),
     (r"/entry/([^/]+)", handlers.EntryHandler),
     (r"/compose", handlers.ComposeHandler),
+    (r"/atomtest", handlers.AtomTestHandler),
+    (r"/subhub", handlers.SubHubHandler),
+    (r"/hubcallback", handlers.HubCallbackHandler),
 ], **settings)
 
 def real_main():
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
     tornado.locale.load_translations(
         os.path.join(os.path.dirname(__file__), "translations"))
     wsgiref.handlers.CGIHandler().run(application)
@@ -63,6 +67,5 @@ def profile_main():
     print "</pre>"
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
     real_main()
     #profile_main()

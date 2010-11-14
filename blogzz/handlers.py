@@ -57,7 +57,7 @@ class BaseHandler(tornado.web.RequestHandler):
         if not self.buzz_client:
             self.buzz_client = buzz.Client()
             self.buzz_client.oauth_scopes=[buzz.FULL_ACCESS_SCOPE]
-            #self.buzz_client.use_anonymous_oauth_consumer()
+            self.buzz_client.use_anonymous_oauth_consumer()
             # creo que no se necesita token
             #token = self.buzz_client.fetch_oauth_request_token('oob')
 
@@ -89,6 +89,32 @@ class HomeHandler(BaseHandler):
 
         self.render("home.html", entries=entries)
 
+class AtomTestHandler(BaseHandler):
+    def get(self):
+        global last_buzz        
+        # let's query buzz
+        buzz_client = self.get_buzz_client()
+        user_id = '@me'
+        buzz_posts = buzz_client.postsatom(type_id="@public",user_id=user_id).data
+        logging.info("obtained %d buzzes" % len(buzz_posts))
+        self.render("atom.html", entries=buzz_posts)
+        
+class SubHubHandler(BaseHandler):
+    def get(self):
+        global last_buzz        
+        # let's query buzz
+        buzz_client = self.get_buzz_client()
+        user_id = '@me'
+        resp = buzz_client.subscribe2hub(type_id="@public",user_id=user_id)
+        logging.info(resp.read())
+        self.render("atom.html", entries=resp.read())
+    
+class HubCallbackHandler(BaseHandler):
+    def post(self):
+        challenge = self.get_argument('hub.challenge')
+        self.set_status('200')
+        logging.info(self.request)
+        self.write(challenge)
 
 class EntryHandler(BaseHandler):
     def get(self, slug):

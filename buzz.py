@@ -84,6 +84,8 @@ import re
 
 import logging
 
+import feedparser
+
 #sys.path.append(os.path.join(os.path.dirname(__file__), 'third_party'))
 
 try:
@@ -504,6 +506,65 @@ class Client:
       )
     return response
 
+  def fetch_atom_api_response(self, http_method, http_uri, http_headers={}, \
+                http_connection=None, http_body=''):
+    if not http_connection:
+      http_connection = self.http_connection
+    if not self.oauth_consumer and http_headers.get('Authorization'):
+      del http_headers['Authorization']
+    http_headers.update({
+      'Content-Length': len(http_body)
+    })
+    if http_body:
+      http_headers.update({
+        'Content-Type': 'application/atom+xml'
+      })
+    if self.oauth_consumer and self.oauth_access_token:
+      # Build OAuth request and add OAuth header if we've got an access token
+      oauth_request = self.build_oauth_request(http_method, http_uri)
+      http_headers.update(oauth_request.to_header())
+    try:
+      try:
+        http_connection.request(
+          http_method, http_uri,
+          headers=http_headers,
+          body=http_body
+        )
+        response = http_connection.getresponse()
+      except (httplib.BadStatusLine, httplib.CannotSendRequest):
+        if http_connection and http_connection == self.http_connection:
+          # Reset the connection
+          http_connection.close()
+          http_connection = None
+          self._http_connection = None
+          http_connection = self.http_connection
+          # Retry once
+          http_connection.request(
+            http_method, http_uri,
+            headers=http_headers,
+            body=http_body
+          )
+          response = http_connection.getresponse()
+    except Exception, e:
+      if e.__class__.__name__ == 'ApplicationError' or \
+          e.__class__.__name__ == 'DownloadError':
+        if "5" in e.message:
+          message = "Request timed out"
+        else:
+          message = "Request failed"
+      else:
+        message = str(e)
+      atom = None
+      # If the raw JSON of the error is available, we don't want to lose it.
+      if hasattr(e, '_atom'):
+        atom = e._json
+      raise RetrieveError(
+        uri=http_uri,
+        message=message,
+        atom=atom
+      )
+    return response
+
   # People APIs
 
   def person(self, user_id='@me'):
@@ -580,6 +641,33 @@ class Client:
     if max_results:
       api_endpoint += "&max-results=" + str(max_results)
     return Result(self, 'GET', api_endpoint, result_type=Post)
+    
+  def postsatom(self, type_id='@self', user_id='@me', max_results=20):
+    if isinstance(user_id, Person):
+      user_id = user_id.id
+    api_endpoint = API_PREFIX + "/activities/" + str(user_id) + "/" + type_id
+    api_endpoint += "?alt=atom"
+    if max_results:
+      api_endpoint += "&max-results=" + str(max_results)
+    return ResultAtom(self, 'GET', api_endpoint, result_type=Post)
+
+  def subscribe2hub(self, type_id='@self', user_id='@me', max_results=20):
+    if isinstance(user_id, Person):
+      user_id = user_id.id
+    api_endpoint = API_PREFIX + "/activities/" + str(user_id) + "/" + type_id
+    con = httplib.HTTPConnection('pubsubhubbub.appspot.com')
+    body =  "hub.mode=subscribe&hub.topic=%s&hub.callback=http://laguatusaguerrera.appspot.com/hubcallback&hub.verify=async" % api_endpoint
+    con.request(
+        'POST',
+        '',
+        body=body,
+        headers={
+          'Content-Type': 'application/x-www-form-urlencoded'
+        })
+    logging.info(body)
+    response = con.getresponse()
+    logging.info(response.status)
+    return response
 
   def post(self, post_id, actor_id='0'):
     if isinstance(actor_id, Person):
@@ -1403,3 +1491,72 @@ class ResultIterator:
     value = self.result.data[self.local_index]
     self.cursor += 1
     return value
+
+class ResultAtom:
+  def __init__(self, client, http_method, http_uri, http_headers={}, \
+      http_body='', result_type=Post, singular=False):
+    self.client = client
+    self.result_type = result_type
+    self.singular = singular
+
+    # The HTTP response for the current page
+    self._response = None
+    # The HTTP response body for the current page
+    self._body = None
+    # The raw JSON data for the current page
+    self._atom = None
+    # The parsed data for the current page
+    self._data = None
+    # The URI of the next page of results
+    self._next_uri = None
+
+    self._http_method = http_method
+    self._http_uri = http_uri
+    self._http_headers = http_headers
+    self._http_body = http_body
+
+  @property
+  def data(self):
+    if not self._data:
+      if not self._response:
+        self.reload()
+      if not (self._response.status >= 200 and self._response.status < 300):
+        # Response was not a 2xx class status
+        self._parse_error_atom(self._atom)
+      
+    return self._atom
+
+  def reload(self):
+    self._data = None
+    self._response = self.client.fetch_atom_api_response(
+      http_method=self._http_method,
+      http_uri=self._http_uri,
+      http_headers=self._http_headers,
+      http_body=self._http_body
+    )
+    self._body = self._response.read()
+    try:
+      if self._body == '':
+        self._atom = None
+      else:
+        self._atom = feedparser.parse(self._body)
+    except Exception, e:
+      raise JSONParseError(
+        atom=(self._atom or self._body),
+        uri=self._http_uri,
+        exception=e
+      )
+      
+  def _parse_error_atom(self, atom):
+    """Helper method for converting an error response to an exception."""
+    if atom:
+      raise RetrieveError(
+        uri=self._http_uri,
+        message=atom
+        #json=json
+      )
+    else:
+      raise RetrieveError(
+        uri=self._http_uri,
+        message='Unknown error'
+      )
