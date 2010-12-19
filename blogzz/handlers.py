@@ -112,7 +112,7 @@ class HubCallbackHandler(BaseHandler):
     def post(self):
         challenge = self.get_argument('hub.challenge')
         self.set_status('200')
-        logging.info('Callback received:" + self.request)
+        logging.info('Callback received:' + self.request)
         self.write(challenge)
 
 class EntryHandler(BaseHandler):
