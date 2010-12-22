@@ -1,4 +1,5 @@
 from google.appengine.ext import db
+  
 
 class Content(db.Model):
     author = db.UserProperty()
@@ -19,12 +20,10 @@ class Entry(Content):
 class Comment(Content):
     """ Same as entry but with a refrence to the Entry it belongs
         to and no title or slug."""
-    entry = db.ReferenceProperty(Entry)
-
-class Buzz(Entry):
-    """ Besides all properties in Content, a Buzz instance also
-        has the complete json returned from google buzz."""
-    json = db.TextProperty(required=True)
+    entry = db.ReferenceProperty(Entry) 
     
-
-
+class Attachment(db.Model):
+    entry = db.ReferenceProperty(Entry)
+    type = db.StringProperty()
+    preview = db.LinkProperty()
+    enclosure = db.LinkProperty

@@ -32,5 +32,12 @@ def import_buzzes(posts,user):
                 #updated=datetime.datetime.strptime(du,"%Y-%m-%dT%H:%M:%S")
             )
             entry.put()
-            logging.debug(entry)
             
+            for attachment in post.attachments:
+                attachment = models.Attachment(
+                    entry = entry,
+                    type= attachment.type, 
+                    preview= attachment.links.preview[0].href,
+                    enclosure= attachment.links.enclosure[0].href
+                )
+                attachment.put()

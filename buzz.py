@@ -649,7 +649,7 @@ class Client:
     api_endpoint += "?alt=atom"
     if max_results:
       api_endpoint += "&max-results=" + str(max_results)
-    logging.info(api_endpoint)
+    logging.debug(api_endpoint)
     return ResultAtom(self, 'GET', api_endpoint, result_type=Post)
 
   def subscribe2hub(self, type_id='@self', user_id='@me', max_results=20):
@@ -665,9 +665,9 @@ class Client:
         headers={
           'Content-Type': 'application/x-www-form-urlencoded'
         })
-    logging.info(body)
+    logging.debug(body)
     response = con.getresponse()
-    logging.info(response.status)
+    logging.debug(response.status)
     return response
 
   def post(self, post_id, actor_id='0'):

@@ -78,7 +78,7 @@ class HomeHandler(BaseHandler):
             buzz_posts = buzz_client.posts(user_id=user_id).data
             #buzz_posts = buzz_client.search("date:2010-07-30").data
             last_buzz = datetime.datetime.now()
-            logging.info("obtained %d buzzes" % len(buzz_posts))
+            logging.debug("obtained %d buzzes" % len(buzz_posts))
             importer.import_buzzes(buzz_posts,self.current_user)
 
         entries = db.Query(models.Entry).order('-published').fetch(limit=5)
@@ -112,7 +112,7 @@ class HubCallbackHandler(BaseHandler):
     def post(self):
         challenge = self.get_argument('hub.challenge')
         self.set_status('200')
-        logging.info('Callback received:' + self.request)
+        logging.debug('Callback received:' + self.request)
         self.write(challenge)
 
 class EntryHandler(BaseHandler):
@@ -130,7 +130,7 @@ class ArchiveHandler(BaseHandler):
 
 class FeedHandler(BaseHandler):
     def get(self):
-        entries = db.Query(Entry).order('-published').fetch(limit=10)
+        entries = db.Query(models.Entry).order('-published').fetch(limit=10)
         self.set_header("Content-Type", "application/atom+xml")
         self.render("feed.xml", entries=entries)
 
