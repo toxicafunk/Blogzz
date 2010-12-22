@@ -26,46 +26,47 @@ import wsgiref.handlers
 import blogzz.handlers as handlers
 
 settings = {
-    "blog_title": u"Movimiento y prop\u00F3sito",
-    "template_path": os.path.join(os.path.dirname(__file__), "templates"),
-    "ui_modules": {"Entry": handlers.EntryModule},
-    "xsrf_cookies": True,
-    "use_buzz": True,
+	"blog_title": u"Movimiento y prop\u00F3sito",
+	"template_path": os.path.join(os.path.dirname(__file__), "templates"),
+	"ui_modules": {"Entry": handlers.EntryModule},
+	"xsrf_cookies": True,
+	"use_buzz": True,
 }
 application = tornado.wsgi.WSGIApplication([
-    (r"/", handlers.HomeHandler),
-    (r"/archive", handlers.ArchiveHandler),
-    (r"/feed", handlers.FeedHandler),
-    (r"/entry/([^/]+)", handlers.EntryHandler),
-    (r"/compose", handlers.ComposeHandler),
-    (r"/atomtest", handlers.AtomTestHandler),
-    (r"/subhub", handlers.SubHubHandler),
-    (r"/hubcallback", handlers.HubCallbackHandler),
+	(r"/", handlers.HomeHandler),
+	(r"/archive", handlers.ArchiveHandler),
+	(r"/feed", handlers.FeedHandler),
+	(r"/entry/([^/]+)", handlers.EntryHandler),
+	(r"/compose", handlers.ComposeHandler),
+	(r"/atomtest", handlers.AtomTestHandler),
+	(r"/subhub", handlers.SubHubHandler),
+	(r"/hubcallback", handlers.HubCallbackHandler),
 ], **settings)
 
 def real_main():
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
-    #tornado.locale.load_translations(
-    #    os.path.join(os.path.dirname(__file__), "translations"))
-    wsgiref.handlers.CGIHandler().run(application)
+	#logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
+	logging.getLogger().setLevel(logging.DEBUG)
+	#tornado.locale.load_translations(
+	#    os.path.join(os.path.dirname(__file__), "translations"))
+	wsgiref.handlers.CGIHandler().run(application)
 
 def profile_main():
-    # This is the main function for profiling
-    # We've renamed our original main() above to real_main()
-    import cProfile, pstats
-    prof = cProfile.Profile()
-    prof = prof.runctx("real_main()", globals(), locals())
-    print '<link rel="stylesheet" href="/static/css/profile.css" type="text/css"/>'
-    print "<pre id='profile'>"
-    stats = pstats.Stats(prof)
-    stats.sort_stats("time")  # Or cumulative
-    stats.print_stats(80)  # 80 = how many to print
-    # The rest is optional.
-    print "----------"
-    stats.print_callees()
-    stats.print_callers()
-    print "</pre>"
+	# This is the main function for profiling
+	# We've renamed our original main() above to real_main()
+	import cProfile, pstats
+	prof = cProfile.Profile()
+	prof = prof.runctx("real_main()", globals(), locals())
+	print '<link rel="stylesheet" href="/static/css/profile.css" type="text/css"/>'
+	print "<pre id='profile'>"
+	stats = pstats.Stats(prof)
+	stats.sort_stats("time")  # Or cumulative
+	stats.print_stats(80)  # 80 = how many to print
+	# The rest is optional.
+	print "----------"
+	stats.print_callees()
+	stats.print_callers()
+	print "</pre>"
 
 if __name__ == "__main__":
-    real_main()
-    #profile_main()
+	real_main()
+	#profile_main()

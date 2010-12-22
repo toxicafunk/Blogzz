@@ -897,6 +897,7 @@ class Post:
     if self.json:
       # Parse the incoming JSON
       # Follow Postel's law
+      #logging.info(json)
       try:
         json = _prune_json_envelope(json)
         self.id = json['id']
@@ -1141,6 +1142,9 @@ class Attachment:
           self.uri = self.link['href']
         if links and links.get('preview'):
           self.preview = json['links']['preview'][0]
+        # Added enclosure
+        if links and links.get('enclosure'):
+          self.enclosure = json['links']['enclosure'][0]
         self.type = json['type']
       except KeyError, e:
         raise JSONParseError(

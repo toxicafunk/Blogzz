@@ -26,4 +26,7 @@ class Attachment(db.Model):
     entry = db.ReferenceProperty(Entry)
     type = db.StringProperty()
     preview = db.LinkProperty()
-    enclosure = db.LinkProperty
+    enclosure = db.LinkProperty()
+    
+    def __unicode__(self):
+        return '%s\n%s' % (self.preview,self.enclosure)

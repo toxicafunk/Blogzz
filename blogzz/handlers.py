@@ -86,6 +86,10 @@ class HomeHandler(BaseHandler):
             if not self.current_user or self.current_user.administrator:
                 self.redirect("/compose")
                 return
+        
+        #I don't like this but can't think of another solution
+        for entry in entries:
+            logging.debug(entry.attachment_set.fetch(5))
 
         self.render("home.html", entries=entries)
 
@@ -177,6 +181,6 @@ class ComposeHandler(BaseHandler):
 
 
 class EntryModule(tornado.web.UIModule):
-    def render(self, entry):
-        return self.render_string("modules/entry.html", entry=entry)
+    def render(self, entry, preview=True):
+        return self.render_string("modules/entry.html", entry=entry, preview=preview)
 
