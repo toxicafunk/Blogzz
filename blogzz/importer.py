@@ -40,7 +40,7 @@ def import_buzzes(posts,user):
 				attach = models.Attachment(
 					entry = entry,
 					type= attachment.type,
-					preview= attachment.preview['href'],
-					enclosure= attachment.enclosure['href']
+					preview= attachment.preview,
+					enclosure= attachment.enclosure.href
 				)
 				attach.put()

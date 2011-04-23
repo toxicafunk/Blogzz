@@ -1,164 +1,63 @@
-/*
- * Copyright 2009 Facebook
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License. You may obtain
- * a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
-
-body {
-  color: black;
-  margin: 15px;
-  margin-top: 0;
-}
-
-body,
-input,
-textarea {
-  font-family: Georgia, serif;
-  font-size: 12pt;
-}
-
-table {
-  border-collapse: collapse;
-  border: 0;
-}
-
-td {
-  border: 0;
-  padding: 0;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: "Helvetica Nue", Helvetica, Arial, sans-serif;
-  margin: 0;
-}
-
-h1 {
-  font-size: 20pt;
-}
-
-pre,
-code {
-  font-family: monospace;
-  color: #060;
-}
-
-pre {
-  margin-left: 1em;
-  padding-left: 1em;
-  border-left: 1px solid silver;
-  line-height: 14pt;
-}
-
-a,
-a code {
-  color: #00c;
-}
-
-#body {
-  margin: auto;
-  background-color:#e2ecd7;
-}
-
-#header {
-  background-color: #5c8f59;
-  padding: 5px 10px;
-  margin-bottom: 1em;
-}
-
-#header,
-#header a {
-  color: white;
-}
-
-#header h1 a {
-  text-decoration: none;
-}
-
-#lcol {
-  float: left;
-  width: 14%;
-  background-color:#E3EFB3;
-}
-
-#rcol {
-  float: right;
-  width: 14%;
-}
-
-#content {
-    float: left;
-    width: 70%;
-    margin: 0 0.5em;
-}
+body { background: #f7f7f7 url(/static/imgs/headerbg.png) repeat-x; font: 12 Arial, Verdana, Monospace;}
+h1 { font: bold 48px squaIr, Tahoma;}
+h2 { font: bold 16px "Arial Rounded MT Bold", Arial, Verdana; }
+h3 { font: bold 18px "Arial Rounded MT Bold", Arial, Verdana; }
+h4 { font: bold 12px "Arial Rounded MT Bold", Arial, Verdana; }
 
 
-#footer {
-  margin-left: 10px;
-  margin-right: 10px;
-  margin-top: 3em;
-}
+.button { display: inline-block; cursor: pointer;	text-align: center;	text-decoration: none; font: 14px/100% "Arial Rounded MT Bold" Arial, sans-serif;	padding: 8px 28px 9px; text-shadow: 0 1px 1px rgba(0,0,0,.3); -moz-border-radius: 8px;	border-radius: 8px;	-webkit-box-shadow: 0 1px 2px rgba(0,0,0,1);	-moz-box-shadow: 0 1px 2px rgba(0,0,0,1);	box-shadow: 0 1px 2px rgba(0,0,0,1);}
+.button:hover { text-decoration: none; }
+.button:active { position: relative;	top: 1px; }
+.orange { color: #fef4e9; border: solid 1px #da7c0c; 	background: #f78d1d; background: -webkit-gradient(linear, left top, left bottom, from(#faa51a), to(#f47a20));	background: -moz-linear-gradient(top,  #faa51a,  #f47a20); filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#faa51a', endColorstr='#f47a20'); }
+.orange:hover { 	background: #f47c20; background: -webkit-gradient(linear, left top, left bottom, from(#f88e11), to(#f06015));	background: -moz-linear-gradient(top,  #f88e11,  #f06015); 	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#f88e11', endColorstr='#f06015'); }
+.orange:active { color: #fcd3a5; background: -webkit-gradient(linear, left top, left bottom, from(#f47a20), to(#faa51a));	background: -moz-linear-gradient(top,  #f47a20,  #faa51a); filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#f47a20', endColorstr='#faa51a'); }
 
-.entry h1 a {
-  color: black;
-  text-decoration: none;
-}
+#wrapper{ width: 1000px; margin: 0px auto;}
 
-.entry {
-  margin-bottom: 2em;
-}
+#header{ width:1000px; height: 105px; float:left; text-align: center; }
+#header div { float:right; color:#ffffff; }
+#header div a { color:#ffffff; }
+#header h1 { margin-top: 20px; }
+#header h1 a { color: #f78d1d; text-shadow: 2px 3px 7px #000; }
 
-.entry .date {
-  margin-top: 3px;
-}
+#left-col {float: left; width: 165px; margin-top: 25px; }
+#categories { height: 320px; }
+#categories h4{ margin-top: 15px; text-align: center; text-decoration:underline;}
+#catbox { margin-top:10px; width:160px;  height:280px; background: #dbd9d9;}
+#catbox li { padding:5px 10px; line-height:110%;}
+#catbox a { text-decoration:none;}
+#tags  { height: 320px; }
+#tags h4{ margin-top: 15px; text-align: center; text-decoration:underline; }
+#tagbox { margin-top:10px; width:160px;  height:280px; background: #dbd9d9;}
+#tagbox li { padding:5px 10px; line-height:110%;}
+#tagbox a { text-decoration:none;}
 
-.entry p {
-  margin: 0;
-  margin-bottom: 1em;
-}
+.division { float: left; margin-top: 95px; }
 
-.entry .body {
-  margin-top: 1em;
-  line-height: 16pt;
-}
+#main { width:660px; float: left; margin-top: 30px; margin-rigth: 5px; }
+#main h2, p, img { float:left;}
+p.name { padding-top:15px; padding-left:280px; padding-right:10px; }
 
-.compose td {
-  vertical-align: middle;
-  padding-bottom: 5px;
-}
+#boxcontent { margin-top: 40px; margin-left: 5px; margin-right: 5px}
+.post { width:640px; height:160px; background: #eee; margin-top: 55px; margin-left:auto; margin-right:auto; padding-top: 15px; padding-left: 10px; padding-bottom: 5px; }
+.post h3 { float:left; padding-right: 20px; }
+.post p  { width: 520px; padding-top: 5px; }
+.post a { padding-top: 5px; clear: both; }
+.more { float:left; text-decoration: none;}
+#sharebtn { float: right; margin-right:20px; margin-bottom:15px;}
+#sharebtn img { padding-right: 1px;}
 
-.compose td.field {
-  padding-right: 10px;
-}
 
-.compose .title,
-.compose .submit {
-  font-family: "Helvetica Nue", Helvetica, Arial, sans-serif;
-  font-weight: bold;
-}
 
-.compose .title {
-  font-size: 20pt;
-}
+#right-col { width: 165px ; float:right; margin-top: 55px;}
+#twitter  { height: 320px; }
+#twitter  h4{ margin-top: 15px; text-align: center; text-decoration:underline; }
+#tweets  { margin-top:10px; width:165px;  height:280px; background: #dbd9d9;}
+#tweets  p { font-size: 12px; margin-top: 5px; padding: 5px 10px; line-height: 110%;}
+#tweets a { text-decoration:none;}
 
-.compose .title,
-.compose .markdown {
-  width: 100%;
-}
 
-.compose .markdown {
-  height: 500px;
-  line-height: 16pt;
-}
+#footer { clear:both; width: 700px; height:35px; background: #121212; margin-left:auto; margin-right: auto; }
+#footer #nav { width: 300px; margin-left:auto; margin-right:auto; text-align: center;}
+#footer #nav li { float: left; font-size: 16px; margin-top: 5px; margin-right: 20px; }
+#footer #nav li a { color: #ffffff; text-decoration: none;}

@@ -1,2 +1,2 @@
 #! /bin/bash
-../gae/dev_appserver.py $1 .
+../google_appengine/dev_appserver.py $1 .

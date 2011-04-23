@@ -71,8 +71,9 @@ class BaseHandler(tornado.web.RequestHandler):
 class HomeHandler(BaseHandler):
     def get(self):
         global last_buzz
-        if self.settings["use_buzz"] and (not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 120):
+        if self.settings["use_buzz"] and (not last_buzz or (datetime.datetime.now() - last_buzz).seconds > 1800):
             # let's query buzz
+            # Need to change so that it logins user
             buzz_client = self.get_buzz_client()
             user_id = '@me'
             buzz_posts = buzz_client.posts(user_id=user_id).data

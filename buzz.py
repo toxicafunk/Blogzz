@@ -16,6 +16,8 @@
 Common Tasks
 ============
 - Authentication
+  - Google's implementation of OAuth is covered in the documentation for the
+    Accounts API: http://code.google.com/apis/accounts/docs/OAuth_ref.html
   - Getting the request token::
     import buzz
     client = buzz.Client()
@@ -47,6 +49,17 @@ Common Tasks
     # Retrieve the persisted access token
     client.build_oauth_access_token(
       access_token.key, access_token.secret
+    )
+- Getting streams
+  - Signed-in user's consumption stream::
+    results = client.posts(user_id='@me', type_id='@consumption')
+  - Signed-in user's published posts::
+    results = client.posts(user_id='@me', type_id='@self')
+  - Another user's public posts::
+    results = client.posts(user_id='googlebuzz', type_id='@public')
+  - Larger result pages::
+    results = client.posts(
+      user_id='googlebuzz', type_id='@public', max_results=100
     )
 - Creating a post
   - Simple::
@@ -99,7 +112,12 @@ try:
 except (ImportError):
   import simplejson
 
-CONFIG_PATH = os.environ.get('BUZZ_CONFIG_PATH', 'buzz_python_client.yaml')
+default_path = os.path.join(
+  os.path.dirname(__file__), 'buzz_python_client.yaml'
+)
+if not os.path.exists(default_path):
+  default_path = 'buzz_python_client.yaml'
+CONFIG_PATH = os.environ.get('BUZZ_CONFIG_PATH', default_path)
 if os.path.exists(CONFIG_PATH):
   # Allow optional configuration file to be loaded
   try:
@@ -116,6 +134,7 @@ else:
 
 READONLY_SCOPE = 'https://www.googleapis.com/auth/buzz.readonly'
 FULL_ACCESS_SCOPE = 'https://www.googleapis.com/auth/buzz'
+PHOTOS_SCOPE = 'https://picasaweb.google.com/data/'
 
 OAUTH_REQUEST_TOKEN_URI = \
   'https://www.google.com/accounts/OAuthGetRequestToken'
@@ -123,6 +142,14 @@ OAUTH_ACCESS_TOKEN_URI = \
   'https://www.google.com/accounts/OAuthGetAccessToken'
 OAUTH_AUTHORIZATION_URI = \
   'https://www.google.com/buzz/api/auth/OAuthAuthorizeToken'
+
+if CLIENT_CONFIG.has_key('debug') and CLIENT_CONFIG.get('debug'):
+    DEBUG = True
+    logging.basicConfig(level=logging.DEBUG)
+else:
+    DEBUG = False
+
+DEFAULT_PAGE_SIZE = 20
 
 class RetrieveError(Exception):
   """
@@ -184,6 +211,37 @@ def _prune_json_envelope(json):
     raise TypeError('Expected dict: \'%s\'' % str(json))
   return json
 
+def _parse_links(json):
+  # Follow Postel's law
+  if not isinstance(json, dict):
+    raise TypeError(
+      'Expected dict as arg but received %s: %s' % type(json), json
+    )
+  links = []
+  if json.get('links'):
+    json = json.get('links')
+  if json:
+    for link_obj in json:
+      if isinstance(link_obj, basestring):
+        # We've got a unicode or string (depending on OS config) key to an
+        # array rather than a link structure
+        link_list = json[link_obj]
+        if isinstance(link_list, list):
+          for link_json in link_list:
+            links.append(Link(link_json, rel=link_obj))
+        elif isinstance(link_list, dict):
+          # Yikes, WTF... parse it, but seriously, WTF.
+          links.append(Link(link_list, rel=link_obj))            
+        else:
+          raise TypeError('Expected list or dict: \'%s\'' % str(link_list))
+      elif isinstance(link_obj, dict):
+        # We've got a flat array of link structures
+        link_json = link_obj
+        links.append(Link(link_json))
+      else:
+        raise TypeError('Expected dict: \'%s\'' % str(link_obj))
+  return links
+
 def _parse_geocode(geocode):
   # Follow Postel's law
   if ' ' in geocode:
@@ -196,10 +254,10 @@ def _parse_geocode(geocode):
 
 class Client:
   """
-  The L{Client} object is the primary method of making calls against the Buzz
-  API.  It can be used with or without authentication.  It attempts to reuse
-  HTTP connections whenever possible.  Currently, authentication is done via
-  OAuth.  
+  The Buzz API L{Client} object is the primary method of making calls against
+  the Buzz API. It can be used with or without authentication. It attempts to
+  reuse HTTP connections whenever possible. Currently, authentication is done
+  via OAuth.
   """
   def __init__(self):
     # Make sure we're always getting the right HTTP connection, even if
@@ -220,6 +278,8 @@ class Client:
         self._port = 80
 
     self._http_connection = None
+
+    self.api_key = None
 
     # OAuth state
     self.oauth_scopes = []
@@ -453,8 +513,19 @@ class Client:
       http_connection = self.http_connection
     if not self.oauth_consumer and http_headers.get('Authorization'):
       del http_headers['Authorization']
+    if self.api_key:
+      # Is anyone else bothered by this?  I know I am.
+      # It should *not* be this hard to insert a new query parameter correctly.
+      # I must surely be missing something.
+      parsed_uri = urlparse.urlsplit(http_uri)
+      query = parsed_uri.query.split('&')
+      query.insert(0, 'key=' + self.api_key)
+      http_uri = urlparse.urlunsplit((
+        parsed_uri.scheme, parsed_uri.netloc, parsed_uri.path,
+        '&'.join(query), parsed_uri.fragment
+      ))
     http_headers.update({
-      'Content-Length': len(http_body)
+      'Content-Length': str(len(http_body))
     })
     if http_body:
       http_headers.update({
@@ -493,6 +564,8 @@ class Client:
           message = "Request timed out"
         else:
           message = "Request failed"
+      elif e.__class__.__name__ == 'TypeError':
+        message = "Network failure"
       else:
         message = str(e)
       json = None
@@ -501,13 +574,14 @@ class Client:
         json = e._json
       raise RetrieveError(
         uri=http_uri,
-        message=message,
+        message="%s: %s" % (e.__class__.__name__, message),
         json=json
       )
     return response
 
   def fetch_atom_api_response(self, http_method, http_uri, http_headers={}, \
                 http_connection=None, http_body=''):
+    '''BLOGZZ:'''
     if not http_connection:
       http_connection = self.http_connection
     if not self.oauth_consumer and http_headers.get('Authorization'):
@@ -567,6 +641,25 @@ class Client:
 
   # People APIs
 
+  def people_search(self, query=None):
+    api_endpoint = API_PREFIX + "/people/search?alt=json"
+    if query:
+      api_endpoint += "&q=" + urllib.quote_plus(query)
+    logging.info(api_endpoint)
+    return Result(self, 'GET', api_endpoint, result_type=Person)
+
+  def people_search_by_topic(self, \
+      query=None, latitude=None, longitude=None, radius=None):
+    api_endpoint = API_PREFIX + "/activities/search/@people?alt=json"
+    if query:
+      api_endpoint += "&q=" + urllib.quote_plus(query)
+    if (latitude is not None) and (longitude is not None):
+      api_endpoint += "&lat=" + urllib.quote(latitude)
+      api_endpoint += "&lon=" + urllib.quote(longitude)
+    if radius is not None:
+      api_endpoint += "&radius=" + urllib.quote(str(radius))
+    return Result(self, 'GET', api_endpoint, result_type=Person)
+
   def person(self, user_id='@me'):
     if isinstance(user_id, Person):
       # You'd think we could just return directly here, but sometimes a
@@ -622,7 +715,8 @@ class Client:
 
   # Post APIs
 
-  def search(self, query=None, latitude=None, longitude=None, radius=None):
+  def search(self, query=None, latitude=None, longitude=None, radius=None,
+      max_results=20):
     api_endpoint = API_PREFIX + "/activities/search?alt=json"
     if query:
       api_endpoint += "&q=" + urllib.quote_plus(query)
@@ -631,15 +725,30 @@ class Client:
       api_endpoint += "&lon=" + urllib.quote(longitude)
     if radius is not None:
       api_endpoint += "&radius=" + urllib.quote(str(radius))
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
     return Result(self, 'GET', api_endpoint, result_type=Post)
 
-  def posts(self, type_id='@self', user_id='@me', max_results=20):
+  def __add_max_results(self, api_endpoint, max_results):
+    if max_results:
+      api_endpoint += "&max-results=" + str(max_results)
+      return api_endpoint
+
+    return api_endpoint
+
+  def __add_max_comments(self, api_endpoint, max_comments):
+    if max_comments:
+      api_endpoint += "&max-comments=" + str(max_comments)
+      return api_endpoint
+
+    return api_endpoint
+
+  def posts(self, type_id='@self', user_id='@me', max_results=20, max_comments=0):
     if isinstance(user_id, Person):
       user_id = user_id.id
     api_endpoint = API_PREFIX + "/activities/" + str(user_id) + "/" + type_id
     api_endpoint += "?alt=json"
-    if max_results:
-      api_endpoint += "&max-results=" + str(max_results)
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
+    api_endpoint = self.__add_max_comments(api_endpoint, max_comments)
     return Result(self, 'GET', api_endpoint, result_type=Post)
     
   def postsatom(self, type_id='@self', user_id='@me', max_results=20):
@@ -685,6 +794,8 @@ class Client:
     api_endpoint = API_PREFIX + "/activities/@me/@self"
     api_endpoint += "?alt=json"
     json_string = simplejson.dumps({'data': post._json_output})
+    logging.debug('Creating post: %s' % json_string)
+
     return Result(
       self, 'POST', api_endpoint, http_body=json_string, result_type=None
     ).data
@@ -714,8 +825,7 @@ class Client:
     api_endpoint = API_PREFIX + "/activities/" + actor_id + \
       "/@self/" + post_id + "/@comments"
     api_endpoint += "?alt=json"
-    if max_results:
-      api_endpoint += "&max-results=" + str(max_results)
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
     return Result(self, 'GET', api_endpoint, result_type=Comment)
 
   def create_comment(self, comment):
@@ -757,6 +867,18 @@ class Client:
   def commented_posts(self, user_id='@me'):
     """Returns a collection of posts that the user has commented on."""
     return self.posts(type_id='@comments', user_id=user_id)
+  
+  # Related Links
+  
+  def related_links(self, post_id, actor_id='0'):
+    if isinstance(actor_id, Person):
+      actor_id = actor_id.id
+    if isinstance(post_id, Post):
+      post_id = post_id.id
+    api_endpoint = API_PREFIX + "/activities/" + actor_id + \
+      "/@self/" + post_id + "/@related"
+    api_endpoint += "?alt=json"
+    return Result(self, 'GET', api_endpoint, result_type=Link)
 
   # Likes
 
@@ -766,10 +888,9 @@ class Client:
     if isinstance(post_id, Post):
       post_id = post_id.id
     api_endpoint = API_PREFIX + "/activities/" + actor_id + \
-      "/@self/" + post_id + "/@likers"
+      "/@self/" + post_id + "/@liked"
     api_endpoint += "?alt=json"
-    if max_results:
-      api_endpoint += "&max-results=" + str(max_results)
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
     return Result(self, 'GET', api_endpoint, result_type=Person)
 
   def liked_posts(self, user_id='@me'):
@@ -849,6 +970,49 @@ class Client:
         exception=e
       )
 
+  # Albums
+
+  def albums(self, user_id='@me', max_results=20):
+    if isinstance(user_id, Person):
+      user_id = user_id.id
+    api_endpoint = API_PREFIX + "/photos/" + str(user_id) + "/@self"
+    api_endpoint += "?alt=json"
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
+    return Result(self, 'GET', api_endpoint, result_type=Album)
+
+  def album(self, user_id='@me', album_id=None, max_results=20):
+    if isinstance(user_id, Person):
+      user_id = user_id.id
+    api_endpoint = API_PREFIX + "/photos/" + str(user_id) + \
+      "/@self/" + album_id
+    api_endpoint += "?alt=json"
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
+    return Result(self, 'GET', api_endpoint, result_type=Album, singular=True)
+
+  def photos(self, user_id='@me', album_id='@recent', max_results=20):
+    if isinstance(user_id, Person):
+      user_id = user_id.id
+    if isinstance(album_id, Album):
+      album_id = album_id.id
+    api_endpoint = API_PREFIX + "/photos/" + str(user_id) + \
+      "/@self/" + album_id + "/@photos"
+    api_endpoint += "?alt=json"
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
+    return Result(self, 'GET', api_endpoint, result_type=Photo)
+
+  def photo(self, user_id='@me', album_id=None, photo_id=None, max_results=20):
+    if isinstance(user_id, Person):
+      user_id = user_id.id
+    if isinstance(album_id, Album):
+      album_id = album_id.id
+    if isinstance(photo_id, Photo):
+      photo_id = photo_id.id
+    api_endpoint = API_PREFIX + "/photos/" + str(user_id) + \
+      "/@self/" + album_id + "/@photos/" + photo_id
+    api_endpoint += "?alt=json"
+    api_endpoint = self.__add_max_results(api_endpoint, max_results)
+    return Result(self, 'GET', api_endpoint, result_type=Photo, singular=True)
+
   # OAuth debugging
 
   def oauth_token_info(self):
@@ -868,8 +1032,13 @@ class Client:
     return response.read()
 
 class Post:
+  """
+  The L{Post} object represents a post within Buzz.  A post has an actor and
+  content, and may have zero or more comments and likes.  An L{Attachment} may
+  be associated with the post by appending to the attachments list.
+  """
   def __init__(self, json=None, client=None,
-      content=None, uri=None, verb=None, actor=None,
+      content=None, annotation=None, uri=None, verb=None, actor=None,
       geocode=None, place_id=None,
       attachments=None):
     self.client = client
@@ -881,9 +1050,11 @@ class Post:
     self.visibility=None
     self.published=None
     self.updated=None
+    self.source=None
     
     # Construct the post piece-wise.
     self.content = content
+    self.annotation = annotation
     self.uri = uri
     self.verb = verb
     self.actor = actor
@@ -892,7 +1063,9 @@ class Post:
     self.attachments = attachments
     
     self._likers = None
+    self.liker_count = 0
     self._comments = None
+    self.comment_count = 0
     
     if self.json:
       # Parse the incoming JSON
@@ -900,6 +1073,8 @@ class Post:
       #logging.info(json)
       try:
         json = _prune_json_envelope(json)
+        if json.get('error'):
+          raise JSONParseError(json=json)
         self.id = json['id']
         if isinstance(json.get('content'), dict):
           self.content = json['content']['value']
@@ -907,14 +1082,35 @@ class Post:
           self.content = json['content']
         elif json.get('object') and json['object'].get('content'):
           self.content = json['object']['content']
+        if json.get('annotation'):
+          self.annotation = json['annotation']
         if isinstance(json['title'], dict):
           self.title = json['title']['value']
         else:
           self.title = json['title']
         if json.get('object'):
           self.object = json['object']
-        self.link = json['links']['alternate'][0]
-        self.uri = self.link['href']
+        if json.get('links'):
+          self.links = _parse_links(json.get('links'))
+        self.replies = []
+        self.liked = []
+        if self.links:
+          for link in self.links:
+            if link.rel == "alternate":
+              self.link = link
+              self.uri = self.link.uri
+            elif link.rel == "replies":
+              self.replies.append(link)
+            elif link.rel == "liked":
+              self.liked.append(link)
+        if self.replies:
+          for reply in self.replies:
+            if reply.count:
+              self.comment_count += reply.count
+        if self.liked:
+          for liker in self.liked:
+            if liker.count:
+              self.liker_count += liker.count
         if isinstance(json.get('verb'), list):
           self.verb = json['verb'][0]
         elif json.get('verb'):
@@ -950,7 +1146,8 @@ class Post:
           if isinstance(self.visibility, dict) and \
               self.visibility.get('entries'):
             self.visibility = self.visibility.get('entries')
-        # TODO: handle timestamps
+        if json.get('source') and json['source'].get('title'):
+          self.source = json['source']['title']
       except KeyError, e:
         raise JSONParseError(
           json=json,
@@ -970,7 +1167,10 @@ class Post:
   @property
   def public(self):
     if self.visibility:
-      public_visibilities = [entry for entry in self.visibility if entry.get('id') == 'tag:google.com,2010:buzz-group:@me:@public']
+      public_visibilities = [
+        entry for entry in self.visibility
+        if entry.get('id') == 'tag:google.com,2010:buzz-group:@me:@public'
+      ]
       return not not public_visibilities
     else:
       # If there's no visibility attribute it's public
@@ -992,6 +1192,8 @@ class Post:
       }
     if self.content:
       output['object']['content'] = self.content
+    if self.annotation:
+      output['annotation'] = self.annotation
     if self.type:
       output['object']['type'] = self.type
     else:
@@ -1014,13 +1216,19 @@ class Post:
     """Syntactic sugar for `client.comments(post)`."""
     if not client:
       client = self.client
-    return self.client.comments(post_id=self.id, actor_id=self.actor.id)
+    return client.comments(post_id=self.id, actor_id=self.actor.id)
+
+  def related_links(self, client=None):
+    """Syntactic sugar for `client.related_links(post)`."""
+    if not client:
+      client = self.client
+    return client.related_links(post_id=self.id, actor_id=self.actor.id)
 
   def likers(self, client=None):
     """Syntactic sugar for `client.likers(post)`."""
     if not client:
       client = self.client
-    return self.client.likers(post_id=self.id, actor_id=self.actor.id)
+    return client.likers(post_id=self.id, actor_id=self.actor.id)
 
   def like(self, client=None):
     """Syntactic sugar for `client.like_post(post)`."""
@@ -1047,6 +1255,10 @@ class Post:
     return client.unmute_post(post_id=self.id)
 
 class Comment:
+  """
+  The L{Comment} object represents a comment on a L{Post} within Buzz. A
+  comment always has an actor and content associated with it.
+  """
   def __init__(self, json=None, client=None,
       post=None, post_id=None, content=None):
     self.client = client
@@ -1054,12 +1266,18 @@ class Comment:
     self.id = None
     self.content = content
     self.actor = None
+    self.links = []
     self._post = post
     self._post_id = post_id
+    self.published=None
+    self.updated=None
+    
     if json:
       # Follow Postel's law
       try:
         json = _prune_json_envelope(json)
+        if json.get('error'):
+          raise JSONParseError(json=json)
         self.id = json['id']
         if isinstance(json.get('content'), dict):
           self.content = json['content']['value']
@@ -1071,9 +1289,17 @@ class Comment:
           self.actor = Person(json['author'], client=self.client)
         elif json.get('actor'):
           self.actor = Person(json['actor'], client=self.client)
-        if json.get('links') and json['links'].get('inReplyTo'):
-          self._post_id = json['links']['inReplyTo'][0]['ref']
-        # TODO: handle timestamps
+        if json.get('links'):
+          self.links = _parse_links(json.get('links'))
+        if self.links:
+          for link in self.links:
+            if link.rel == "inReplyTo":
+              self._post_id = link.id
+              break
+        if json.get('published'):
+          self.published = json['published']
+        if json.get('updated'):
+          self.updated = json['updated']
       except KeyError, e:
         raise JSONParseError(
           json=json,
@@ -1109,7 +1335,91 @@ class Comment:
           client.post(post_id=self._post_id).data
     return self._post
 
+class Link:
+  """
+  The L{Link} object represents a hyperlink.  It encapsulates both the URI of
+  the hyperlink itself, as well as metadata such as MIME type and rel-value.
+  """
+  def __init__(self, json=None, 
+      id=None, rel=None, type=None, title=None, summary=None,
+      count=None, uri=None):
+    self.json = json
+    self.id = id
+    self.rel = rel
+    self.type = type
+    self.title = title
+    self.summary = summary
+    self.count = count
+    self.uri = uri
+    if json:
+      try:
+        json = _prune_json_envelope(json)
+        if json.get('error'):
+          raise JSONParseError(json=json)
+        if json.get('ref'):
+          self.id = json['ref']
+        elif json.get('id'):
+          self.id = json['id']
+        self.rel = json.get('rel') or self.rel
+        if self.rel == 'page':
+          # Because seriously...
+          self.rel = 'alternate'
+        self.type = json.get('type') or self.type
+        if json.get('title'):
+          if isinstance(json['title'], dict):
+            self.title = json['title']['value']
+          else:
+            self.title = json['title']
+        else:
+          self.title = None
+        if isinstance(json.get('summary'), dict):
+          self.summary = json['summary']['value']
+        elif json.get('summary'):
+          self.summary = json['summary']
+        elif isinstance(json.get('content'), dict):
+          self.summary = json['content']['value']
+        elif json.get('content'):
+          self.summary = json['content']
+        else:
+          self.summary = None
+        if json.get('count'):
+          self.count = json['count']
+        if json.get('href'):
+          self.uri = json['href']
+        elif json.get('uri'):
+          self.uri = json['uri']
+      except KeyError, e:
+        raise JSONParseError(
+          json=json,
+          exception=e
+        )
+
+  def __repr__(self):
+    return (u'<Link[%s]>' % self.uri).encode(
+      'ASCII', 'ignore'
+    )
+
+  @property
+  def _json_output(self):
+    output = {}
+    if self.id:
+      output['ref'] = self.id
+    output['rel'] = self.rel or 'alternate'
+    output['type'] = self.type or 'text/html'
+    if self.title:
+      output['title'] = self.title
+    if self.summary:
+      output['summary'] = self.summary
+    if self.uri:
+      output['href'] = self.uri
+    return output
+
 class Attachment:
+  """
+  The L{Attachment} object represents an attachment to a L{Post} within Buzz.
+  It may contain rich media types such as video, audio, pictures, or just
+  simple hyperlinks.
+  """
   def __init__(self, json=None, client=None,
       type=None, title=None, content=None, uri=None,
       preview=None, enclosure=None):
@@ -1120,11 +1430,14 @@ class Attachment:
     self.content = content
     self.uri = uri
     self.link = None
+    self.links = []
     self.preview = preview
     self.enclosure = enclosure
     if json:
       try:
         json = _prune_json_envelope(json)
+        if json.get('error'):
+          raise JSONParseError(json=json)
         if isinstance(json.get('content'), dict):
           self.content = json['content']['value']
         elif json.get('content'):
@@ -1136,15 +1449,17 @@ class Attachment:
             self.title = json['title']
         else:
           self.title = None
-        links = json.get('links')
-        if links and links.get('alternate'):
-          self.link = json['links']['alternate'][0]
-          self.uri = self.link['href']
-        if links and links.get('preview'):
-          self.preview = json['links']['preview'][0]
-        # Added enclosure
-        if links and links.get('enclosure'):
-          self.enclosure = json['links']['enclosure'][0]
+        if json.get('links'):
+          self.links = _parse_links(json.get('links'))
+        if self.links:
+          for link in self.links:
+            if link.rel == "alternate":
+              self.link = link
+              self.uri = self.link.uri
+            elif link.rel == "preview":
+              self.preview = link
+            elif link.rel == "enclosure":
+              self.enclosure = link
         self.type = json['type']
       except KeyError, e:
         raise JSONParseError(
@@ -1172,15 +1487,211 @@ class Attachment:
       }
     if self.preview:
       output['links'] = {
-        u'preview': [{u'href': self.preview}]
+        u'preview': [{u'href': self.preview.uri}]
       }
     if self.enclosure:
       output['links'] = {
-        u'enclosure': [{u'href': self.enclosure}]
+        u'enclosure': [{u'href': self.enclosure.uri}]
       }
     return output
 
+class Album:
+  def __init__(self, json=None, client=None,
+      title=None, content=None):
+      
+    self.client = client
+    self.json = json
+    self.id = None
+    self.title = title
+    self.content = content
+    self.owner = None
+    self.created = None
+    self.last_modified = None
+    self.version = None
+    self.uri = None
+    self.link = None
+    self.links = []
+    if json:
+      try:
+        json = _prune_json_envelope(json)
+        if json.get('error'):
+          raise JSONParseError(json=json)
+        if json.get('id'):
+          self.id = json['id']
+        if isinstance(json.get('content'), dict):
+          self.content = json['content']['value']
+        elif json.get('content'):
+          self.content = json['content']
+        elif json.get('description'):
+          self.content = json['description']
+        else:
+          self.content = None
+        if json.get('title'):
+          if isinstance(json['title'], dict):
+            self.title = json['title']['value']
+          else:
+            self.title = json['title']
+        else:
+          self.title = None
+        if json.get('created'):
+          self.created = json['created']
+        if json.get('lastModified'):
+          self.last_modified = json['lastModified']
+        if json.get('version'):
+          self.version = json['version']
+        if json.get('links'):
+          self.links = _parse_links(json.get('links'))
+        if self.links:
+          for link in self.links:
+            if link.rel == "alternate":
+              self.link = link
+              self.uri = self.link.uri
+          if not self.uri:
+            for link in self.links:
+              if link.type == "text/html":
+                self.link = link
+                self.uri = self.link.uri
+        if json.get('actor'):
+          self.owner = Person(json['actor'], client=self.client)
+        elif json.get('owner'):
+          self.owner = Person(json['owner'], client=self.client)
+      except KeyError, e:
+        raise JSONParseError(
+          json=json,
+          exception=e
+        )
+
+  def __repr__(self):
+    return (u'<Album[%s]>' % self.id).encode('ASCII', 'ignore')
+
+  def photos(self, client=None):
+    """Syntactic sugar for `client.photos(album)`."""
+    if not client:
+      client = self.client
+    return client.photos(album_id=self.id, user_id=self.owner.id)
+
+  # TODO
+  # @property
+  # def _json_output(self):
+  #   output = {}
+  #   if self.title:
+  #     output['title'] = self.title
+  #   if self.content:
+  #     output['content'] = self.content
+  #   if self.uri:
+  #     output['links'] = {
+  #       u'alternate': [{u'href': self.uri, u'type': u'text/html'}]
+  #     }
+  #   if self.preview:
+  #     output['links'] = {
+  #       u'preview': [{u'href': self.preview.uri}]
+  #     }
+  #   if self.enclosure:
+  #     output['links'] = {
+  #       u'enclosure': [{u'href': self.enclosure.uri}]
+  #     }
+  #   return output
+
+class Photo:
+  def __init__(self, json=None, client=None,
+      title=None, content=None):
+
+    self.client = client
+    self.json = json
+    self.id = None
+    self.title = title
+    self.content = content
+    self.owner = None
+    self.created = None
+    self.last_modified = None
+    self.timestamp = None
+    self.version = None
+    self.uri = None
+    self.link = None
+    self.links = []
+    if json:
+      try:
+        json = _prune_json_envelope(json)
+        if json.get('error'):
+          raise JSONParseError(json=json)
+        if json.get('id'):
+          self.id = json['id']
+        if isinstance(json.get('content'), dict):
+          self.content = json['content']['value']
+        elif json.get('content'):
+          self.content = json['content']
+        elif json.get('description'):
+          self.content = json['description']
+        else:
+          self.content = None
+        if json.get('title'):
+          if isinstance(json['title'], dict):
+            self.title = json['title']['value']
+          else:
+            self.title = json['title']
+        else:
+          self.title = None
+        if json.get('created'):
+          self.created = json['created']
+        if json.get('lastModified'):
+          self.last_modified = json['lastModified']
+        if json.get('timestamp'):
+          self.timestamp = json['timestamp']
+        if json.get('version'):
+          self.version = json['version']
+        if json.get('links'):
+          self.links = _parse_links(json.get('links'))
+        if self.links:
+          for link in self.links:
+            if link.rel == "alternate":
+              self.link = link
+              self.uri = self.link.uri
+          if not self.uri:
+            for link in self.links:
+              if link.type == "text/html":
+                self.link = link
+                self.uri = self.link.uri
+        if json.get('actor'):
+          self.owner = Person(json['actor'], client=self.client)
+        elif json.get('owner'):
+          self.owner = Person(json['owner'], client=self.client)
+      except KeyError, e:
+        raise JSONParseError(
+          json=json,
+          exception=e
+        )
+
+  def __repr__(self):
+    return (u'<Photo[%s]>' % self.id).encode('ASCII', 'ignore')
+
+  # TODO
+  # @property
+  # def _json_output(self):
+  #   output = {}
+  #   if self.title:
+  #     output['title'] = self.title
+  #   if self.content:
+  #     output['content'] = self.content
+  #   if self.uri:
+  #     output['links'] = {
+  #       u'alternate': [{u'href': self.uri, u'type': u'text/html'}]
+  #     }
+  #   if self.preview:
+  #     output['links'] = {
+  #       u'preview': [{u'href': self.preview.uri}]
+  #     }
+  #   if self.enclosure:
+  #     output['links'] = {
+  #       u'enclosure': [{u'href': self.enclosure.uri}]
+  #     }
+  #   return output
+
 class Person:
+  """
+  The L{Person} object represents a Buzz user.  L{Person} objects may be
+  associated with L{Post} or L{Comment} objects as authors, or with other
+  L{Person} objects as followers.
+  """
   def __init__(self, json, client=None):
     self.client = client
     self.json = json
@@ -1188,11 +1699,15 @@ class Person:
     # Follow Postel's law
     try:
       json = _prune_json_envelope(json)
+      if json.get('error'):
+        raise JSONParseError(json=json)
       self.uri = \
         json.get('uri') or json.get('profileUrl')
+      if self.uri == "":
+        self.uri = None
       if json.get('id'):
         self.id = json.get('id')
-      else:
+      elif self.uri:
         self.id = re.search('/([^/]*?)$', self.uri).group(1)
       self.name = \
         json.get('name') or json.get('displayName')
@@ -1204,7 +1719,8 @@ class Person:
         self.uris = json.get('urls')
       if json.get('photos'):
         self.photos = json.get('photos')
-      if not re.search('^\\d+$', re.search('/([^/]*?)$', self.uri).group(1)):
+      if self.uri and \
+          not re.search('^\\d+$', re.search('/([^/]*?)$', self.uri).group(1)):
         self.profile_name = re.search('/([^/]*?)$', self.uri).group(1)
     except KeyError, e:
       raise JSONParseError(
@@ -1249,6 +1765,9 @@ class Person:
     return client.posts(user_id=self.id)
 
 class Result:
+  """
+  The L{Result} object encapsulates each result returned from the API.
+  """
   def __init__(self, client, http_method, http_uri, http_headers={}, \
       http_body='', result_type=Post, singular=False):
     self.client = client
@@ -1270,6 +1789,7 @@ class Result:
     self._http_uri = http_uri
     self._http_headers = http_headers
     self._http_body = http_body
+    self.poco_count = 0
 
   def __iter__(self):
     return ResultIterator(self)
@@ -1294,9 +1814,24 @@ class Result:
         self._data = self._parse_person(self._json)
       elif self.result_type == Person and not self.singular:
         self._data = self._parse_people(self._json)
+      elif self.result_type == Link and self.singular:
+        self._data = self._parse_link(self._json)
+      elif self.result_type == Link and not self.singular:
+        self._data = self._parse_links(self._json)
+      elif self.result_type == Album and self.singular:
+        self._data = self._parse_album(self._json)
+      elif self.result_type == Album and not self.singular:
+        self._data = self._parse_albums(self._json)
+      elif self.result_type == Photo and self.singular:
+        self._data = self._parse_photo(self._json)
+      elif self.result_type == Photo and not self.singular:
+        self._data = self._parse_photos(self._json)
     return self._data
 
   def reload(self):
+    if DEBUG:
+      logging.debug('URI to fetch is %s' % self._http_uri)
+      logging.debug('Headers are: %s' % str(self._http_headers))
     self._data = None
     self._response = self.client.fetch_api_response(
       http_method=self._http_method,
@@ -1309,6 +1844,10 @@ class Result:
       if self._body == '':
         self._json = None
       else:
+        # Use a custom decoder so that we can switch off strict mode so that illegal control characters don't break
+        # things
+        #decoder = simplejson.JSONDecoder(strict=False)
+        #self._json = decoder.decode(self._body)
         self._json = simplejson.loads(self._body)
     except Exception, e:
       raise JSONParseError(
@@ -1338,6 +1877,24 @@ class Result:
         if not self._json:
           self.reload()
         semi_pruned_json = self._json.get('data') or self._json
+
+      # Portable Contacts feeds have different pagination rules
+      if semi_pruned_json.get('kind') == 'buzz#peopleFeed':
+        total_results = semi_pruned_json.get('totalResults')
+        if semi_pruned_json.get('startIndex') < total_results:
+          if 'c=' in self._http_uri:
+            old_param = '&c=%s' % self.poco_count
+            self.poco_count += DEFAULT_PAGE_SIZE
+            new_param = '&c=%s' % self.poco_count
+            self._next_uri = self._http_uri.replace(old_param, new_param)
+          else:
+            self._next_uri = self._http_uri + '&c=%s' % DEFAULT_PAGE_SIZE
+            self.poco_count = DEFAULT_PAGE_SIZE
+          if self.poco_count >= total_results:
+            # Finished processing PoCo
+            return None
+          return self._next_uri
+      else:
         links = semi_pruned_json.get('links')
         if not links:
           return None
@@ -1385,21 +1942,21 @@ class Result:
         exception=e
       )
 
-    def _parse_comment(self, json):
-      """Helper method for converting a comment JSON structure."""
-      try:
-        if json.get('error'):
-          self.parse_error(json)
-        json = _prune_json_envelope(json)
-        if isinstance(json, list) and len(json) == 1:
-          json = json[0]
-        return Comment(json, client=self.client)
-      except KeyError, e:
-        raise JSONParseError(
-          uri=self._http_uri,
-          json=json,
-          exception=e
-        )
+  def _parse_comment(self, json):
+    """Helper method for converting a comment JSON structure."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list) and len(json) == 1:
+        json = json[0]
+      return Comment(json, client=self.client)
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
 
   def _parse_comments(self, json):
     """Helper method for converting a set of comment JSON structures."""
@@ -1457,6 +2014,114 @@ class Result:
         exception=e
       )
 
+  def _parse_link(self, json):
+    """Helper method for converting a person JSON structure."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list) and len(json) == 1:
+        json = json[0]
+      return Link(json)
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
+
+  def _parse_links(self, json):
+    """Helper method for converting a set of person JSON structures."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list):
+        return [
+          Link(link_json) for link_json in json
+        ]
+      else:
+        # The entire key is omitted when there are no results
+        return []
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
+
+  def _parse_album(self, json):
+    """Helper method for converting an album JSON structure."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list) and len(json) == 1:
+        json = json[0]
+      return Album(json, client=self.client)
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
+
+  def _parse_albums(self, json):
+    """Helper method for converting a set of album JSON structures."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list):
+        return [
+          Album(post_json, client=self.client) for post_json in json
+        ]
+      else:
+        # The entire key is omitted when there are no results
+        return []
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
+
+  def _parse_photo(self, json):
+    """Helper method for converting a photo JSON structure."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list) and len(json) == 1:
+        json = json[0]
+      return Photo(json, client=self.client)
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
+
+  def _parse_photos(self, json):
+    """Helper method for converting a set of photo JSON structures."""
+    try:
+      if json.get('error'):
+        self.parse_error(json)
+      json = _prune_json_envelope(json)
+      if isinstance(json, list):
+        return [
+          Photo(post_json, client=self.client) for post_json in json
+        ]
+      else:
+        # The entire key is omitted when there are no results
+        return []
+    except KeyError, e:
+      raise JSONParseError(
+        uri=self._http_uri,
+        json=json,
+        exception=e
+      )
+
   def _parse_error(self, json):
     """Helper method for converting an error response to an exception."""
     if json:
@@ -1473,6 +2138,9 @@ class Result:
     
 
 class ResultIterator:
+  """
+  A L{ResultIterator} allows iteration over a result set.
+  """
   def __init__(self, result):
     self.result = result
     self.cursor = 0
@@ -1492,12 +2160,22 @@ class ResultIterator:
         self.result.load_next()
       else:
         raise StopIteration('No more results.')
+    if not self.result.data:
+      raise StopIteration('No data.')
+    if self.local_index >= len(self.result.data):
+      raise IndexError(
+        'Local index %d out of range for data set of size %d' % (
+          self.local_index, len(self.result.data)
+        )
+      )
+
     # The local_index is in range of the current page
     value = self.result.data[self.local_index]
     self.cursor += 1
     return value
 
 class ResultAtom:
+  """BLOGZZ:"""
   def __init__(self, client, http_method, http_uri, http_headers={}, \
       http_body='', result_type=Post, singular=False):
     self.client = client
