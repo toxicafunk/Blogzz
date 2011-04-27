@@ -78,7 +78,13 @@
         <h2><a href="/" class="orange button navlinks">Home</a></h2>
         <h2><a href="#" class="orange button navlinks">Settings</a></h2>
                 
-        <p class="name">Joe Doe</p>
+        <p class="name">
+          Hello, {% if current_user %}
+            {{current_user.nickname()}}
+          {% else %}
+            {{"guest"}}
+          {% end %}
+        </p>
 
         <img src="/static/imgs/rss.png" />
 

@@ -19,6 +19,7 @@ def administrator(method):
     """Decorate with this method to restrict to site admins."""
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
+        logging.debug("Entro al wrapper")
         if not self.current_user:
             if self.request.method == "GET":
                 self.redirect(self.get_login_url())
@@ -143,6 +144,7 @@ class FeedHandler(BaseHandler):
 class ComposeHandler(BaseHandler):
     @administrator
     def get(self):
+        logging.debug("Entro a compose")
         key = self.get_argument("key", None)
         entry = Entry.get(key) if key else None
         self.render("compose.html", entry=entry)
