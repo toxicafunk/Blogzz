@@ -125,7 +125,7 @@ class EntryHandler(BaseHandler):
     def get(self, slug):
         entry = db.Query(models.Entry).filter("slug =", slug).get()
         if not entry: raise tornado.web.HTTPError(404)
-        self.render("entry.html", entry=entry)
+        self.render("entry.html", entry=entry, isPreview=False)
 
 
 class ArchiveHandler(BaseHandler):
@@ -146,7 +146,7 @@ class ComposeHandler(BaseHandler):
     def get(self):
         logging.debug("Entro a compose")
         key = self.get_argument("key", None)
-        entry = Entry.get(key) if key else None
+        entry = models.Entry.get(key) if key else None
         self.render("compose.html", entry=entry)
 
     @administrator
@@ -184,6 +184,6 @@ class ComposeHandler(BaseHandler):
 
 
 class EntryModule(tornado.web.UIModule):
-    def render(self, entry, preview=True):
-        return self.render_string("modules/entry.html", entry=entry, preview=preview)
+    def render(self, entry, isPreview=True):
+        return self.render_string("modules/entry.html", entry=entry, isPreview=isPreview)
 

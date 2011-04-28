@@ -16,8 +16,10 @@
           {% if not current_user %}
             {{ _('<a href="%(url)s">Sign in</a> to compose/edit') % {"url": escape(users.create_login_url(request.uri))} }}
           {% else %}
-            {% if current_user.administrator %}
-              <a href="/compose">{{ _("New post") }}</a> -
+            {% if current_user %}
+              {{current_user.nickname()}}
+            {% else %}
+              {{"guest"}}
             {% end %}
             <a href="{{ escape(users.create_logout_url(request.uri)) }}">{{ _("Sign out") }}</a>
           {% end %}
@@ -26,7 +28,9 @@
       </div>
       
       <div id="left-col">
-        <a href="#" class="orange button">New Blogzz</a>
+        {% if current_user and current_user.administrator %}
+          <a href="/compose" class="orange button">{{ _("New Blogzz") }}</a>
+        {% end %}
         
         <div id="categories">
           <h4>Categories</h4>
@@ -77,16 +81,8 @@
         
         <h2><a href="/" class="orange button navlinks">Home</a></h2>
         <h2><a href="#" class="orange button navlinks">Settings</a></h2>
-                
-        <p class="name">
-          Hello, {% if current_user %}
-            {{current_user.nickname()}}
-          {% else %}
-            {{"guest"}}
-          {% end %}
-        </p>
-
-        <img src="/static/imgs/rss.png" />
+        
+        <a href="/feed"><img id="rss" src="/static/imgs/rss.png" /></a>
 
         <div id="boxcontent">{% block body %}{% end %}</div>
       </div>

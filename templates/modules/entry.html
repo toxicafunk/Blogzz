@@ -1,19 +1,27 @@
-<div class="post">
-  <h3 class="date">{{ locale.format_date(entry.published, full_format=True, shorter=True) }}</h3>
-  <h3>{{ escape(entry.title) }}</h3>
-  
-  <div class="entry">{{ entry.html }}</div>
-  <div class="attachments">
-	{% for attachment in entry.attachment_set.fetch(5) %}
-		<img src="{{  attachment.preview  if preview else attachment.enclosure }}"/>
-	{% end %}
+<div class="postcontainer">
+  <div class="post">
+    <h3>
+      <em class="date">{{ locale.format_date(entry.published, full_format=True, shorter=True) }}</em>
+      &nbsp;{{ escape(entry.title) }}
+    </h3>
+    
+    <div class="entry">{{ entry.html }}</div>
+    <div class="attachments">
+	  {% for attachment in entry.attachment_set.fetch(5) %}
+		  <img src="{{  attachment.preview  if preview else attachment.enclosure }}"/>
+	  {% end %}
+    </div>
+    {% if isPreview %}
+      <a href="/entry/{{ entry.slug }}" class="more">read more</a>
+    {% else %}
+      <a href="/" class="more">&lt;- back Home</a>
+    {% end %}
+    {% if current_user and current_user.administrator %}
+      <div class="admin"><a href="/compose?key={{ str(entry.key()) }}">{{ _("Edit this post") }}</a></div>
+    {% end %}
   </div>
-  <a href="/entry/{{ entry.slug }}" class="more">read more</a>
-  {% if current_user and current_user.administrator %}
-    <div class="admin"><a href="/compose?key={{ str(entry.key()) }}">{{ _("Edit this post") }}</a></div>
-  {% end %}
 </div>
-<div id="sharebtn">
+<div class="sharebtn">
   <a href="#"><img src="/static/imgs/twitter.png" /></a>
   <a href="#"><img src="/static/imgs/facebook.png" /></a>
   <a href="#"><img src="/static/imgs/buzz.png" /></a>
