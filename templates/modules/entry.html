@@ -1,16 +1,14 @@
 <div class="postcontainer">
-  <div class="post">
+  <div class="post{% if isPreview %} thumbnail{% end %}">
     <h3>
       <em class="date">{{ locale.format_date(entry.published, full_format=True, shorter=True) }}</em>
       &nbsp;{{ escape(entry.title) }}
     </h3>
     
     <div class="entry">{{ entry.html }}</div>
-    <div class="attachments">
-	  {% for attachment in entry.attachment_set.fetch(5) %}
-		  <img src="{{  attachment.preview  if preview else attachment.enclosure }}"/>
-	  {% end %}
-    </div>
+    {% for attachment in entry.attachment_set.fetch(5) %}
+      <img src="{{  attachment.preview  if isPreview else attachment.enclosure }}"/>
+    {% end %}
     {% if isPreview %}
       <a href="/entry/{{ entry.slug }}" class="more">read more</a>
     {% else %}

@@ -36,11 +36,11 @@ def import_buzzes(posts,user):
 			entry.put()
 
 			for attachment in post.attachments:
-				logging.debug("%s, %s" % (attachment.preview, attachment.enclosure))
+				logging.debug("%s, %s" % (attachment.preview.uri, attachment.enclosure.uri))
 				attach = models.Attachment(
 					entry = entry,
 					type= attachment.type,
-					preview= attachment.preview,
-					enclosure= attachment.enclosure.href
+					preview= attachment.preview.uri,
+					enclosure= str(attachment.enclosure.uri)
 				)
 				attach.put()

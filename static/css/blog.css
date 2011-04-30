@@ -5,6 +5,7 @@ h3 { font: bold 18px "Arial Rounded MT Bold", Arial, Verdana; }
 h4 { font: bold 12px "Arial Rounded MT Bold", Arial, Verdana; }
 em { font-style:oblique; font-variant:small-caps; font-weight:lighter; font-size:small; }
 strong { font-weight: bold; text-shadow: 0 4px 4px rgba(0, 0, 0, 0.3); }
+img { max-width:630px;}
 
 
 .button { display: inline-block; cursor: pointer; text-align: center;
@@ -55,7 +56,7 @@ strong { font-weight: bold; text-shadow: 0 4px 4px rgba(0, 0, 0, 0.3); }
 .post span { margin-right:20px;}
 .date { float:right; }
 .thumbnail { margin: 0 0 30px 0;}
-.thumbnail p { width: 520px; margin-bottom:10px;}
+.thumbnail div { width: 520px; margin-bottom:10px;}
 .more { text-decoration: none;}
 .sharebtn { float: right; margin-right:20px; margin-bottom:15px;}
 .sharebtn img { padding-right: 1px;}
