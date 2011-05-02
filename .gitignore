@@ -1,6 +1,6 @@
-atom.xml
+main/
 *.pyc
 *.*~
 *.komodoproject
 *.json
-oauth
+
