@@ -30,7 +30,6 @@ img { max-width:630px;}
 #header h1 { margin-top: 20px; }
 #header h1 a { color: #f78d1d; text-shadow: 2px 3px 7px #000; }
 
-#left-col {float: left; width: 165px; margin-top: 25px; }
 #categories { height: 320px; }
 #categories h4{ margin-top: 15px; text-align: center; text-decoration:underline;}
 #catbox { margin-top:10px; width:160px;  height:280px; background: #dbd9d9;}

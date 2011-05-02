@@ -8,4 +8,4 @@ handlers:
   static_dir: static
 
 - url: /.*
-  script: blog.py
+  script: main/blog.py

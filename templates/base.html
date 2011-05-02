@@ -26,32 +26,35 @@
         </div>
         <h1><a href="/">{{ escape(handler.settings["blog_title"]) }}</a></h1>
       </div>
+              
+      <div id="main">
+        
+        <h2><a href="/" class="orange button navlinks">Home</a></h2>
+        <h2><a href="#" class="orange button navlinks">Settings</a></h2>
+        
+        <a href="/feed"><img id="rss" src="/static/imgs/rss.png" /></a>
+
+        <div id="boxcontent">{% block body %}{% end %}</div>
+      </div>
       
-      <div id="left-col">
+      <div class="division">
+        <img src="/static/imgs/div.png" />
+      </div>
+      
+      <div id="right-col">
         {% if current_user and current_user.administrator %}
           <a href="/compose" class="orange button">{{ _("New Blogzz") }}</a>
         {% end %}
-        
-        <div id="categories">
-          <h4>Categories</h4>
-          <div id="catbox">
-            <ul>
-              <li><a href="#">categoria 1</a></li>
-              <li><a href="#">categoria 2</a></li>
-              <li><a href="#">categoria 3</a></li>
 
-              <li><a href="#">categoria 4</a></li>
-              <li><a href="#">categoria 5</a></li>
-              <li><a href="#">categoria 6</a></li>
-              <li><a href="#">categoria 7</a></li>
-              <li><a href="#">categoria 8</a></li>
-              <li><a href="#">categoria 9</a></li>
-
-              <li><a href="#">categoria 10</a></li>
-            </ul> 
+        <div id="twitter">
+          <h4>Tweets</h4>
+          <div id="tweets">
+            <p>Ejemplo de un tweet</p>
+            <p>Segundo tweet</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
           </div>
         </div>
-            
+        
         <div id="tags">
           <h4>Tags</h4>
           <div id="tagbox">
@@ -69,39 +72,8 @@
               <li><a href="#">tag 10</a></li>
             </ul> 
           </div>
-        </div>         
-      </div>
+        </div>
 
-      
-      <div class="division">
-        <img src="/static/imgs/div.png" />
-      </div>
-      
-      <div id="main">
-        
-        <h2><a href="/" class="orange button navlinks">Home</a></h2>
-        <h2><a href="#" class="orange button navlinks">Settings</a></h2>
-        
-        <a href="/feed"><img id="rss" src="/static/imgs/rss.png" /></a>
-
-        <div id="boxcontent">{% block body %}{% end %}</div>
-      </div>
-      
-      <div class="division">
-        <img src="/static/imgs/div.png" />
-      </div>
-      
-      <div id="right-col">
-
-          <div id="twitter">
-            <h4>Tweets</h4>
-            <div id="tweets">
-              <p>Ejemplo de un tweet</p>
-              <p>Segundo tweet</p>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
-            </div>
-
-          </div>
       </div>
 	
       <div id="footer">			

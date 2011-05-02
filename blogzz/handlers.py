@@ -1,15 +1,16 @@
 import functools
-import markdown
 import re
-import tornado.web
 import unicodedata
 import datetime
 import logging
 
+import tornado.web
+
 from google.appengine.api import users
 from google.appengine.ext import db
 
-import buzz
+import blogzz.buzz as buzz
+import blogzz.markdown as markdown
 import blogzz.models as models
 import blogzz.importer as importer
 
@@ -19,7 +20,6 @@ def administrator(method):
     """Decorate with this method to restrict to site admins."""
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
-        logging.debug("Entro al wrapper")
         if not self.current_user:
             if self.request.method == "GET":
                 self.redirect(self.get_login_url())

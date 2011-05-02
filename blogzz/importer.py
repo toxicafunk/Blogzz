@@ -1,9 +1,9 @@
 import logging,unicodedata,re,datetime
-import markdown
 
 from google.appengine.ext import db
 
 import blogzz.models as models
+import blogzz.markdown as markdown
 
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s:%(msecs)03d %(levelname)-8s %(name)-8s %(message)s', datefmt='%H:%M:%S')
 
