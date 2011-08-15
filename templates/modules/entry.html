@@ -8,11 +8,17 @@
     <div class="entry">{% raw entry.html %}</div>
     {% for attachment in entry.attachment_set.fetch(5) %}
       <img src="{{  attachment.preview  if isPreview else attachment.enclosure }}"/>
+	  {% if not isPreview and attachment.type == 'video' %}
+		{% for id in re.compile('v=(.*)&amp;').findall(entry.html) %}
+		<iframe width="425" height="349" src="http://www.youtube.com/embed/{{ id }}" frameborder="0" allowfullscreen></iframe>
+		{% end %}
+	  {% end %}
     {% end %}
+	
     {% if isPreview %}
-      <a href="/entry/{{ entry.slug }}" class="more">read more</a>
+      <a href="/{{ blog.path }}/entry/{{ entry.slug }}" class="more">read more</a>
     {% else %}
-      <a href="/" class="more">&lt;- back Home</a>
+      <a href="/{{ blog.path }}" class="more">&lt;- back Home</a>
     {% end %}
     {% if current_user and current_user.administrator %}
       <div class="admin"><a href="/compose?key={{ str(entry.key()) }}">{{ _("Edit this post") }}</a></div>

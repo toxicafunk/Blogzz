@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 
+{% block head %}
+    <title>{{ escape(blog.title) }}</title>
+    <link rel="alternate" href="/feed" type="application/atom+xml" title="{{ escape(blog.title) }}"/>
+{% end %}
+
 {% block body %}
   {% for entry in entries %}
-    {% module Entry(entry) %}
+    {% module Entry(entry,blog=blog,isPreview=True) %}
   {% end %}
   
-  <div><a href="/archive">{{ _("Archive") }}</a></div>
+  <div><a href="/{{ blog.path }}/archive">{{ _("Archive") }}</a></div>
 {% end %}

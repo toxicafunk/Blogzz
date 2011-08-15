@@ -2,11 +2,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <title>{{ escape(handler.settings["blog_title"]) }}</title>
+    {% block head %}{% end %}
     <link rel="stylesheet" href="/static/css/reset.css" type="text/css" media="screen"/>
     <link rel="stylesheet" href="/static/css/blog.css" type="text/css" media="screen"/>
-    <link rel="alternate" href="/feed" type="application/atom+xml" title="{{ escape(handler.settings["blog_title"]) }}"/>
-    {% block head %}{% end %}
   </head>
   <body>
     <div id="wrapper">
@@ -24,7 +22,7 @@
             <a href="{{ escape(users.create_logout_url(request.uri)) }}">{{ _("Sign out") }}</a>
           {% end %}
         </div>
-        <h1><a href="/">{{ escape(handler.settings["blog_title"]) }}</a></h1>
+        <h1><a href="/">Blogzz</a></h1>
       </div>
               
       <div id="main">

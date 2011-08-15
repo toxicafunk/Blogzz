@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <title>Blogzz</title>
+    <link rel="alternate" href="/feed" type="application/atom+xml" title="Blogzz"/>
+{% end %}
+
+{% block body %}
+  {% for blog in blogs %}
+    <li><a href="/{{ escape(blog.path) }}" alt="{{ escape(blog.title) }}">{{ escape(blog.title) }}</a>
+  {% end %}
+  
+  {% if not blogs and not current_user %}
+      <p style="margin:2em;">Please login to create a Blog!</p>
+  {% end %}
+  
+  {% if may_create_blog %}
+      <form action="" method="post">
+		{{ xsrf_form_html() }}
+        <fieldset>
+            <legend>Create a Blog</legend>
+            <ul>
+                <li><label for="title">Title of the Blog</label>
+                <input type="text" name="title"/></li>
+                <li><label for="path">Path of the Blog (for the url)</label>
+                <input type="text" name="path"/><li>
+                <a href="{{ buzz_url }}" target="_blank">Click here to obtain your google secret and key</a>
+                <!-- <li><label for="key">Your google key</label>
+                <input type="text" name="key"/></li>
+                <li><label for="secret">Your google secret</label>
+                <input type="text" name="secret"/></li> -->
+				<li><label for="code">Your google verification code</label>
+                <input type="text" name="code"/></li>
+				<li><input type="submit"/></li>
+            </ul>
+        </fieldset>
+  {% end %}
+{% end %}
